@@ -111,11 +111,16 @@ async def reset_login():
 
 
 async def finish_login(c, event):
-    await storage.save_session(c.session.save())
-    attach(c)
+    attach(c)  # اول مانیتور فعال شود، حتی اگر ذخیره Session خطا بدهد
     me = await c.get_me()
     login.clear()
-    await event.respond(f"✅ وارد شدی: {me.first_name}\nمانیتور گروه‌ها فعال است.")
+    note = ""
+    try:
+        await storage.save_session(c.session.save())
+    except Exception as e:
+        log.error("save_session failed: %r", e)
+        note = "\n⚠️ ذخیره Session انجام نشد؛ بعد از ری‌استارت باید دوباره لاگین کنی."
+    await event.respond(f"✅ وارد شدی: {me.first_name}\nمانیتور گروه‌ها فعال است.{note}")
 
 
 @bot.on(events.NewMessage(func=lambda e: e.is_private and e.sender_id == OWNER_ID))
@@ -225,4 +230,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-  
+        
