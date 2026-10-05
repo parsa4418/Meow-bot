@@ -1,13 +1,27 @@
-"""ذخیره امن Session: رمزنگاری با Fernet و نگهداری در Supabase (یا فایل محلی/دیسک Render)."""
+"""ذخیره Session در فایل (یا Supabase اگر تنظیم شده باشد). رمزنگاری اختیاری است."""
 import os
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
 
-_fernet = Fernet(os.environ["SESSION_ENC_KEY"].encode())
+_key = os.environ.get("SESSION_ENC_KEY")
+_fernet = Fernet(_key.encode()) if _key else None
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 FILE_PATH = os.environ.get("SESSION_FILE", "/data/session.enc")
 ROW_ID = "main"
+
+
+def _enc(s: str) -> str:
+    return _fernet.encrypt(s.encode()).decode() if _fernet else s
+
+
+def _dec(s: str):
+    if not _fernet:
+        return s
+    try:
+        return _fernet.decrypt(s.encode()).decode()
+    except InvalidToken:
+        return None
 
 
 def _headers():
@@ -16,36 +30,31 @@ def _headers():
 
 
 async def save_session(s: str) -> None:
-    enc = _fernet.encrypt(s.encode()).decode()
+    data = _enc(s)
     if SUPABASE_URL:
         async with httpx.AsyncClient(timeout=15) as c:
             r = await c.post(f"{SUPABASE_URL}/rest/v1/tg_session",
                              headers={**_headers(), "Prefer": "resolution=merge-duplicates"},
-                             json={"id": ROW_ID, "data": enc})
+                             json={"id": ROW_ID, "data": data})
             r.raise_for_status()
     else:
         os.makedirs(os.path.dirname(FILE_PATH), exist_ok=True)
         with open(FILE_PATH, "w") as f:
-            f.write(enc)
+            f.write(data)
 
 
 async def load_session():
-    enc = None
+    data = None
     if SUPABASE_URL:
         async with httpx.AsyncClient(timeout=15) as c:
             r = await c.get(f"{SUPABASE_URL}/rest/v1/tg_session",
                             headers=_headers(), params={"id": f"eq.{ROW_ID}", "select": "data"})
             r.raise_for_status()
             rows = r.json()
-            enc = rows[0]["data"] if rows else None
+            data = rows[0]["data"] if rows else None
     elif os.path.exists(FILE_PATH):
-        enc = open(FILE_PATH).read()
-    if not enc:
-        return None
-    try:
-        return _fernet.decrypt(enc.encode()).decode()
-    except InvalidToken:
-        return None
+        data = open(FILE_PATH).read()
+    return _dec(data) if data else None
 
 
 async def delete_session() -> None:
@@ -55,4 +64,4 @@ async def delete_session() -> None:
                            headers=_headers(), params={"id": f"eq.{ROW_ID}"})
     elif os.path.exists(FILE_PATH):
         os.remove(FILE_PATH)
-          
+        
