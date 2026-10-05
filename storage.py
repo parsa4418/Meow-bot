@@ -7,7 +7,7 @@ _key = os.environ.get("SESSION_ENC_KEY")
 _fernet = Fernet(_key.encode()) if _key else None
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
-FILE_PATH = os.environ.get("SESSION_FILE", "/data/session.enc")
+FILE_PATH = os.environ.get("SESSION_FILE", "/tmp/session.enc")
 ROW_ID = "main"
 
 
