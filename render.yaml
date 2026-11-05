@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: meowie-bale-bot
+    runtime: docker
+    plan: free
+    envVars:
+      - key: BALE_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
