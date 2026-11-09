@@ -1,0 +1,25 @@
+services:
+  - type: worker
+    name: hapooi-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    disk:
+      name: hapooi-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: BOT_USERNAME
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: DB_PATH
+        value: /var/data/happy_bot.db
+      - key: FORCE_JOIN_CHANNEL
+        sync: false
+      - key: FORCE_JOIN_CHANNEL_LINK
+        sync: false
+      - key: FORCE_JOIN_CHANNEL_NAME
+        sync: false
